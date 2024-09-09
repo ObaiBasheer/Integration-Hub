@@ -3,6 +3,7 @@ using Integration_Hub.Data;
 using Integration_Hub.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
@@ -13,11 +14,13 @@ namespace Integration_Hub.Services
     {
         private readonly AppDbContext _context;
         private readonly HttpClient _httpClient;
+        private readonly IntegrationSettings _integrationSettings;
 
-        public IntegrationService(AppDbContext context, HttpClient httpClient)
+        public IntegrationService(AppDbContext context, HttpClient httpClient, IOptions<IntegrationSettings> integrationSettings)
         {
             _context = context;
             _httpClient = httpClient;
+            _integrationSettings = integrationSettings.Value;
         }
 
         public async Task ExecuteIntegration(Guid integrationId)
@@ -34,7 +37,7 @@ namespace Integration_Hub.Services
             var sourceData = await FetchSourceData(integration.Source!);
 
             // Apply mappings and transformations
-            var transformedData = ApplyMappings(sourceData, integration.Mapping);
+            var transformedData = ApplyMappings(sourceData, integration.Mapping!);
 
             // Send data to destination
             await SendToDestination(transformedData, integration.Destination!);
@@ -55,7 +58,7 @@ namespace Integration_Hub.Services
         {
             if (source.Type == SourceType.API)
             {
-                var config = JsonConvert.DeserializeObject<ApiSourceConfig>(source.Configuration);
+                var config = _integrationSettings.Sources[source.Configuration!];  // Get configuration by name
 
                 // Assume basic authentication for API
                 _httpClient.DefaultRequestHeaders.Authorization =
@@ -74,30 +77,11 @@ namespace Integration_Hub.Services
             throw new NotImplementedException("Source type not supported");
         }
 
-        private JObject ApplyMappings(JObject sourceData, Mapping mapping)
-        {
-            var fieldMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(mapping.FieldMappings);
-            var transformedData = new JObject();
-
-            foreach (var mappingEntry in fieldMappings)
-            {
-                var sourceField = mappingEntry.Key;
-                var destinationField = mappingEntry.Value;
-
-                if (sourceData[sourceField] != null)
-                {
-                    transformedData[destinationField] = sourceData[sourceField];
-                }
-            }
-
-            return transformedData;
-        }
-
         private async Task SendToDestination(JObject transformedData, Destination destination)
         {
             if (destination.Type == DestinationType.Database)
             {
-                var config = JsonConvert.DeserializeObject<DatabaseDestinationConfig>(destination.Configuration);
+                var config = _integrationSettings.Destinations[destination.Configuration!];  // Get configuration by name
 
                 using (var connection = new SqlConnection(config.ConnectionString))
                 {
@@ -120,6 +104,24 @@ namespace Integration_Hub.Services
                 throw new NotImplementedException("Destination type not supported");
             }
         }
+        private JObject ApplyMappings(JObject sourceData, Mapping mapping)
+        {
+            var fieldMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(mapping.FieldMappings);
+            var transformedData = new JObject();
+
+            foreach (var mappingEntry in fieldMappings!)
+            {
+                var sourceField = mappingEntry.Key;
+                var destinationField = mappingEntry.Value;
+
+                if (sourceData[sourceField] != null)
+                {
+                    transformedData[destinationField] = sourceData[sourceField];
+                }
+            }
+
+            return transformedData;
+        }
 
         private string BuildInsertCommand(JObject transformedData, string tableName)
         {
@@ -129,4 +131,5 @@ namespace Integration_Hub.Services
             return $"INSERT INTO {tableName} ({columns}) VALUES ({values})";
         }
     }
+
 }
