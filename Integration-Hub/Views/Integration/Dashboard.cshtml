@@ -1,0 +1,47 @@
+﻿@model IEnumerable<IntegrationViewModel>
+
+@{
+    ViewBag.Title = "Integration Dashboard";
+}
+
+<h2>Integration Dashboard</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Last Run</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var integration in Model)
+        {
+            <tr>
+                <td>@integration.Name</td>
+                <td>@integration.Type</td>
+                <td>
+                    @if (integration.IsActive)
+                    {
+                        <span class="badge badge-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-secondary">Inactive</span>
+                    }
+                </td>
+                <td>
+                    @if (integration.LastRunTime.HasValue)
+                    {
+                        @integration.LastRunTime.Value.ToString("g")
+                    }
+                    else
+                    {
+                        <em>Never</em>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
