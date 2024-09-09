@@ -11,6 +11,7 @@
         public IntegrationStatus Status { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime UpdatedDate { get; set; }
+        public DateTime LastRunTime { get; set; }
 
         // Navigation Properties
         public Source? Source { get; set; }
