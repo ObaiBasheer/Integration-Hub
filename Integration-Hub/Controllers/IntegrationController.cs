@@ -1,4 +1,5 @@
 ﻿using Integration_Hub.Data;
+using Integration_Hub.viewModel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,8 +21,8 @@ namespace Integration_Hub.Controllers
                 {
                     Id = i.Id,
                     Name = i.Name,
-                    Type = i.Source.Type.ToString() + " to " + i.Destination.Type.ToString(),
-                    IsActive = i.IsActive,
+                    Type = i.Source.Type.ToString() + " to " + i.Destination!.Type.ToString(),
+                    IsActive = i.Status.Equals("Active"),
                     LastRunTime = i.LastRunTime
                 })
                 .ToListAsync();
@@ -30,4 +31,4 @@ namespace Integration_Hub.Controllers
         }
     }
 }
-}
+
